@@ -205,6 +205,8 @@ function move(s, dx, dl) {
   if (s.receiver && s.receiver.x === nx && s.receiver.lane === nl) return
   c.x = nx
   c.lane = nl
+  // Past the line of scrimmage there's no passing: the receiver goes dark.
+  if (s.receiver && (c.x - s.los) * dir(s) > 0) s.receiver = null
   emit(s, "step")
   wrapScreen(s)
   if (inScoringZone(s.poss, c.x)) touchdown(s)
@@ -331,7 +333,7 @@ function ballTick(s) {
   if (s.ball.type === "pass") {
     if (s.ball.i >= s.ball.path.length) { catchOrDrop(s); return false }
     var cell = s.ball.path[s.ball.i]
-    if (defenderAt(s, cell.x, cell.lane) >= 0) { passBlocked(s, cell.x); return false }
+    if (catcherAt(s, cell)) { interception(s, cell.x); return false }
     return true
   }
   if (s.ball.i >= s.ball.path.length) { resolveKick(s); return false }
@@ -367,18 +369,16 @@ function passPath(s) {
   return path
 }
 
-function laneOpen(s) {
-  if (!s.receiver || !s.carrier) return false
-  return passPath(s).every(function(cell) { return defenderAt(s, cell.x, cell.lane) < 0 })
+// Can a defender on this cell of the throwing path catch the ball? Defenders
+// who have rushed up to the line of scrimmage or into the backfield are
+// thrown over; anyone past the line in the lane picks it off.
+function catcherAt(s, cell) {
+  return defenderAt(s, cell.x, cell.lane) >= 0 && (cell.x - s.los) * dir(s) > 0
 }
 
-// A defender stands in the throwing lane: the pass is knocked down, and
-// now and then picked off.
-function passBlocked(s, x) {
-  s.ball = null
-  if (random() < 0.25) { interception(s, x); return }
-  emit(s, "incomplete", "INC", "PASS BLOCKED")
-  advanceDown(s, s.los, false)
+function laneOpen(s) {
+  if (!s.receiver || !s.carrier) return false
+  return !passPath(s).some(function(cell) { return catcherAt(s, cell) })
 }
 
 function interception(s, x) {

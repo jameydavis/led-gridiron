@@ -141,35 +141,36 @@ test("completed pass hands the ball to the receiver", L => {
   assert.ok(!L.canPass(s), "only one pass per play")
 })
 
-test("a blocked passing lane is sometimes intercepted", L => {
-  L.setRandom(() => 0.1) // under the 25% pick-off roll
-  const s = scrimmageAt(L, 30)
-  s.receiver = { x: 35, lane: 1, depth: 5 }
-  s.defenders = [{ x: 32, lane: 1 }]
-  L.move(s, 0, 0)
-  s.phase = "live"
-  L.pass(s)
-  while (L.ballTick(s)) {}
-  assert.ok(s.events.some(e => e.code === "INT"))
-  L.nextPlay(s)
-  assert.strictEqual(s.poss, 1)
-  assert.strictEqual(s.los, 32)
+test("a defender past the line in the passing lane always picks it off", L => {
+  for (const r of [0, 0.5, 0.99]) {
+    L.setRandom(() => r)
+    const s = scrimmageAt(L, 30)
+    s.receiver = { x: 35, lane: 1, depth: 5 }
+    s.defenders = [{ x: 32, lane: 1 }] // the middle lineman, still on his line
+    L.move(s, 0, 0)
+    s.phase = "live"
+    assert.ok(!L.laneOpen(s))
+    L.pass(s)
+    while (L.ballTick(s)) {}
+    assert.ok(s.events.some(e => e.code === "INT"), "random " + r)
+    L.nextPlay(s)
+    assert.strictEqual(s.poss, 1)
+    assert.strictEqual(s.los, 32)
+  }
 })
 
-test("a blocked passing lane usually knocks the pass down: no catch, a down is used", L => {
-  L.setRandom(() => 0.9)
-  const s = scrimmageAt(L, 30)
-  s.receiver = { x: 35, lane: 1, depth: 5 }
-  s.defenders = [{ x: 32, lane: 1 }]
+test("a defender who stepped up to the line of scrimmage is thrown over", L => {
+  const s = scrimmageAt(L, 30) // carrier on 29, line of scrimmage 30 (column 2)
+  s.receiver = { x: 34, lane: 1, depth: 5 }
+  s.defenders = [{ x: 30, lane: 1 }] // rushed forward into column 2
   L.move(s, 0, 0)
   s.phase = "live"
-  assert.ok(!L.laneOpen(s))
+  assert.ok(L.laneOpen(s))
   L.pass(s)
   while (L.ballTick(s)) {}
-  assert.ok(s.events.some(e => e.label === "PASS BLOCKED"))
-  assert.strictEqual(s.receiver.x, 35, "the receiver never got the ball")
-  assert.strictEqual(s.down, 2)
-  assert.strictEqual(s.los, 30)
+  assert.ok(!s.events.some(e => e.code === "INT"))
+  assert.deepStrictEqual(s.carrier, { x: 34, lane: 1 })
+  assert.strictEqual(s.phase, "live")
 })
 
 test("an open lane is always a catch, even with a defender right next to the receiver", L => {
@@ -210,6 +211,8 @@ test("no pass once the carrier is past the line of scrimmage", L => {
   assert.ok(L.canPass(s))
   L.move(s, 1, 0) // 31
   assert.ok(!L.canPass(s))
+  assert.strictEqual(s.receiver, null, "the receiver goes dark past the line")
+  assert.ok(!L.leds(s, 0).includes(2))
 })
 
 test("kick from long range punts and flips possession", L => {
