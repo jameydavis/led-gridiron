@@ -81,8 +81,13 @@ omarchy-shell jameydavis.led-gridiron toggle
 ## Requirements
 
 - Omarchy with the Quickshell-based `omarchy-shell`
+- Qt's `QtQuick.Effects` module (MultiEffect) for the LED glow. It ships with Qt 6 and the Omarchy
+  shell already uses it.
 - `pw-play` / `pw-cat` (PipeWire, standard on Omarchy) for sound. While the game is open, it holds
   a silent stream so the audio output doesn't fall asleep between plays and swallow beeps.
+
+No network access, no files written, and no changes to your configuration beyond what
+`omarchy plugin add` / `enable` themselves do.
 
 ## Development
 
