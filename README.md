@@ -15,7 +15,7 @@ computer defense, or two players pass the keyboard on each change of possession.
 omarchy plugin add https://github.com/jameydavis/led-gridiron.git --enable
 ```
 
-Click the three red LEDs in the bar to play. To open it from a key, add a binding in
+Click the football icon in the bar to play. To open it from a key, add a binding in
 `~/.config/hypr/bindings.lua` that runs:
 
 ```bash
@@ -30,7 +30,7 @@ omarchy-shell jameydavis.led-gridiron toggle
 | `Space` | **Pass** to the blinking receiver (only before you cross the line of scrimmage) |
 | `E` | **Kick**. Before the snap: a field goal inside the opponent's 38, otherwise a punt. Also kicks the extra point |
 | `Q` | **Status**: after the whistle, sets up the next play. Tap to cycle field position, down and distance, and time left once; hold to keep the readout cycling until you let go |
-| `R` | **Score**: Home and Visitor |
+| `R` | **Score**: Home and Visitor. Tap for a quick look, hold to keep it up until you let go |
 | `1` / `2` | **Pro 1**: five slow defenders in a loose formation who miss half their tackles. **Pro 2**: six fast defenders in a wall. Switch between plays |
 | `P` | Pause |
 | `M` | Sound on/off |

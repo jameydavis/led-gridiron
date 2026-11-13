@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "jameydavis.led-gridiron",
   "name": "LED Gridiron",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": "Jamey Davis",
   "license": "MIT",
   "description": "A retro handheld LED football game: red blips on a 3-lane field, run, pass and kick with the keyboard",
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "LED Gridiron",
-    "description": "Retro LED handheld football: click the red LEDs to play",
+    "description": "Retro LED handheld football: click the football to play",
     "category": "Games",
     "allowMultiple": false,
     "defaultSection": "right"

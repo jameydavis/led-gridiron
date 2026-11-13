@@ -1,6 +1,6 @@
 // LED Gridiron: a late-'70s style handheld LED football game for Omarchy.
 //
-// The bar shows three little red LEDs; click them (or bind a key to
+// The bar shows a football icon; click it (or bind a key to
 // `omarchy-shell jameydavis.led-gridiron toggle`) and the handheld opens
 // centered on the focused monitor with exclusive keyboard focus. Rules live
 // in Logic.js; this file owns timers, input, sound, and the device face.
@@ -54,6 +54,8 @@ Panel {
   property double lastNewGamePress: 0
   property bool statusHeld: false
   property double statusPressedAt: 0
+  property bool scoreHeld: false
+  property double scorePressedAt: 0
 
   function sync() {
     var events = s.events.splice(0, s.events.length)
@@ -165,6 +167,7 @@ Panel {
     // Every button acts once per press; a held Q just keeps STATUS showing.
     if (keyRepeat) {
       if (k === Qt.Key_Q) qReleaseTimer.stop()
+      if (k === Qt.Key_R) rReleaseTimer.stop()
       return true
     }
     if (k === Qt.Key_Escape) {
@@ -229,6 +232,9 @@ Panel {
       return true
     }
     if (k === Qt.Key_R) {
+      // SCORE can be tapped (shows for a moment) or held (shows until let go).
+      scoreHeld = true
+      scorePressedAt = Date.now()
       statusPage = -1
       flashText = ""; flashLabel = ""
       scoreShown = true
@@ -298,6 +304,7 @@ Panel {
     onTriggered: {
       if (root.statusPage >= 0 && root.statusPage < 2) { root.statusPage++; restart() }
       else if (root.statusPage >= 0 && root.statusHeld) { root.statusPage = 0; restart() }
+      else if (root.statusPage < 0 && root.scoreShown && root.scoreHeld) restart()
       else { root.statusPage = -1; root.scoreShown = false }
     }
   }
@@ -318,9 +325,22 @@ Panel {
 
   function handleKeyRelease(event) {
     keyUpAt[event.key] = Date.now()
-    if (event.isAutoRepeat || event.key !== Qt.Key_Q || !statusHeld) return false
-    qReleaseTimer.restart()
-    return true
+    if (event.isAutoRepeat) return false
+    if (event.key === Qt.Key_Q && statusHeld) { qReleaseTimer.restart(); return true }
+    if (event.key === Qt.Key_R && scoreHeld) { rReleaseTimer.restart(); return true }
+    return false
+  }
+
+  Timer {
+    id: rReleaseTimer
+    interval: root.repeatGapMs
+    onTriggered: {
+      root.scoreHeld = false
+      if (root.scoreShown && Date.now() - root.scorePressedAt >= 600) {
+        statusTimer.stop()
+        root.scoreShown = false
+      }
+    }
   }
 
   Timer {
@@ -348,6 +368,7 @@ Panel {
     root.fullOpen = false
     root.helpOpen = false
     root.statusHeld = false
+    root.scoreHeld = false
     // Closing mid-play pauses so you come back to the same snap.
     if (root.phase === "live" || root.phase === "air" || root.phase === "kick") root.paused = true
   }
@@ -376,18 +397,15 @@ Panel {
     tooltipText: "LED Gridiron"
     iconComponent: Component {
       Item {
-        // Three LEDs: defender, ball carrier (bright), defender.
-        Row {
+        // Nerd Font "fa-football" in the bar's foreground color, like the
+        // other bar icons.
+        Text {
           anchors.centerIn: parent
-          spacing: Style.space(2)
-          Repeater {
-            model: [0.55, 1.0, 0.55]
-            Rectangle {
-              width: Style.space(5); height: width; radius: width / 2
-              color: root.ledRed
-              opacity: modelData
-            }
-          }
+          textFormat: Text.PlainText
+          text: "\ued69"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.icon
         }
       }
     }
@@ -557,7 +575,7 @@ Panel {
             KeyRow { keys: ["SPACE"]; label: "PASS" }
             KeyRow { keys: ["E"]; label: "KICK" }
             KeyRow { keys: ["Q"]; label: "STATUS (HOLD) / NEXT PLAY" }
-            KeyRow { keys: ["R"]; label: "SCORE" }
+            KeyRow { keys: ["R"]; label: "SCORE (HOLD)" }
             KeyRow { keys: ["1", "2"]; label: "PRO 1 / PRO 2" }
             KeyRow { keys: ["P"]; label: "PAUSE" }
             KeyRow { keys: ["M"]; label: "SOUND" }
