@@ -44,7 +44,7 @@ omarchy-shell jameydavis.led-gridiron toggle
   yards, with the defenders keeping their spots on the glass, until you reach the end zone. You
   can't back off the rear edge.
 - After every play, press STATUS (`Q`) to reset the field for the next snap.
-- Every snap starts from the classic lineup: you on the first column, a three-man line two
+- Every kickoff return and every snap starts from the classic lineup: you on the first column, a three-man line two
   columns ahead, a linebacker in the middle, a defender up top and a deep back at the far end.
 - Four 5:00 quarters. The clock runs during plays, and each tackle runs off 8 more seconds.
 - Gain 10 yards in four downs for a first down, or the ball turns over at the spot.

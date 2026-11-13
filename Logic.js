@@ -81,11 +81,7 @@ function setupKickoff(s, receivingTeam) {
   s.ball = null
   s.kickPlan = null
   s.carrier = { x: start, lane: 1 }
-  // Pro 2 lines up a full-width wall; Pro 1 staggers five men and leaves gaps.
-  var shape = s.pro === 2
-    ? [[4, 0], [4, 1], [4, 2], [6, 0], [6, 2], [8, 1]]
-    : [[4, 0], [4, 2], [6, 1], [8, 0], [8, 2]]
-  s.defenders = shape.map(function(p) { return { x: clamp(start + d * p[0], MIN_X, MAX_X), lane: p[1] } })
+  s.defenders = lineUp(s, start)
   s.los = start
   s.down = 1
   s.togo = 10
@@ -101,16 +97,22 @@ function setupScrimmage(s) {
   s.kickPlan = null
   s.carrier = { x: L - d, lane: 1 }
   var wide = random() < 0.5 ? 0 : 2
+  // The receiver stays dark until the snap so the pre-snap picture is
+  // exactly the classic lineup.
   s.receiver = { x: L, lane: wide, depth: rint(4, 7) }
-  // The classic handheld lineup, counted from the ball carrier on the first
-  // column: a three-man line two columns ahead, a linebacker in the middle
-  // at +4, a defender in the top lane at +6 and a deep back in the bottom
-  // lane at +9. (Offsets below are from the line of scrimmage, one column
-  // ahead of the carrier.) The receiver stays dark until the snap so the
-  // pre-snap picture is exactly this.
-  var shape = [[1, 0], [1, 1], [1, 2], [3, 1], [5, 0], [8, 2]]
-  s.defenders = shape.map(function(p) { return { x: clamp(L + d * p[0], MIN_X, MAX_X), lane: p[1] } })
+  s.defenders = lineUp(s, s.carrier.x)
   snapViewport(s)
+}
+
+// The classic handheld lineup, used for every kickoff return and every snap.
+// [columns ahead of the ball carrier, lane]: a three-man line two columns
+// ahead, a linebacker in the middle at +4, a defender in the top lane at +6
+// and a deep back in the bottom lane at +9.
+var FORMATION = [[2, 0], [2, 1], [2, 2], [4, 1], [6, 0], [9, 2]]
+
+function lineUp(s, carrierX) {
+  var d = dir(s)
+  return FORMATION.map(function(p) { return { x: clamp(carrierX + d * p[0], MIN_X, MAX_X), lane: p[1] } })
 }
 
 // Put the carrier at the near edge of the window, facing the open field.

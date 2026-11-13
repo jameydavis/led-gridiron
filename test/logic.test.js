@@ -221,6 +221,16 @@ test("the starting lineup matches the classic handheld formation", L => {
   assert.deepStrictEqual(vrows, ["...d...d..", ".....d.d.C", "d......d.."])
 })
 
+test("kickoff returns start from the same lineup, on both Pro levels", L => {
+  for (const pro of [1, 2]) {
+    const s = L.newGame(pro)
+    assert.strictEqual(s.kind, "return")
+    const m = L.leds(s, 0)
+    const rows = [0, 1, 2].map(r => m.slice(r * 10, r * 10 + 10).map(v => v ? (v === 3 ? "C" : "d") : ".").join(""))
+    assert.deepStrictEqual(rows, ["..d...d...", "C.d.d.....", "..d......d"], "pro " + pro)
+  }
+})
+
 test("the screen stays put, then wraps 10 yards when the carrier runs off the edge", L => {
   const s = scrimmageAt(L, 30)
   s.receiver = null
