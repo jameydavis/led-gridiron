@@ -29,7 +29,7 @@ omarchy-shell jameydavis.led-gridiron toggle
 | `W` `A` `S` `D` (or arrows) | Move one step per press. The first move snaps the ball |
 | `Space` | **Pass** to the blinking receiver (only before you cross the line of scrimmage) |
 | `E` | **Kick**. Before the snap: a field goal inside the opponent's 38, otherwise a punt. Also kicks the extra point |
-| `Q` | **Status**: after the whistle, sets up the next play. Otherwise shows field position, down and distance, then time left |
+| `Q` | **Status**: after the whistle, sets up the next play. Tap to cycle field position, down and distance, and time left once; hold to keep the readout cycling until you let go |
 | `R` | **Score**: Home and Visitor |
 | `1` / `2` | **Pro 1**: five slow defenders in a loose formation who miss half their tackles. **Pro 2**: six fast defenders in a wall. Switch between plays |
 | `P` | Pause |

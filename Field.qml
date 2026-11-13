@@ -60,16 +60,26 @@ Rectangle {
       width: field.cell
       height: field.cell
 
+      // Players are horizontal pill-shaped LED segments with rounded ends;
+      // the ball in flight stays a small round dot so it reads differently.
+      readonly property bool isBall: level === 4
+      readonly property real pillW: field.cell * 0.66
+      readonly property real pillH: field.cell * 0.3
+
       // Glow halo for the bright blips (ball carrier, ball in flight).
       Rectangle {
         anchors.centerIn: parent
-        width: parent.width * 0.86; height: width; radius: width / 2
+        width: isBall ? parent.width * 0.7 : pillW + field.cell * 0.24
+        height: isBall ? width : pillH + field.cell * 0.24
+        radius: height / 2
         color: "#ff2a12"
         opacity: level >= 3 ? 0.22 : level === 2 ? 0.1 : 0
       }
       Rectangle {
         anchors.centerIn: parent
-        width: parent.width * (level === 4 ? 0.34 : 0.44); height: width; radius: width / 2
+        width: isBall ? field.cell * 0.34 : pillW
+        height: isBall ? width : pillH
+        radius: height / 2
         color: level === 0 ? "#3a0c09"
              : level === 1 ? "#c41d10"
              : level === 2 ? "#e8301c"
@@ -79,8 +89,10 @@ Rectangle {
         // A tiny specular dot so lit LEDs read as domes, not flat circles.
         Rectangle {
           visible: level > 0
-          x: parent.width * 0.22; y: parent.height * 0.18
-          width: parent.width * 0.26; height: width; radius: width / 2
+          x: parent.width * (isBall ? 0.22 : 0.16); y: parent.height * 0.18
+          width: parent.width * (isBall ? 0.26 : 0.3)
+          height: isBall ? width : parent.height * 0.26
+          radius: height / 2
           color: "#ffffff"
           opacity: level >= 3 ? 0.55 : 0.25
         }

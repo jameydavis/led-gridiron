@@ -52,6 +52,8 @@ Panel {
   property int statusPage: -1
   property bool scoreShown: false
   property double lastNewGamePress: 0
+  property bool statusHeld: false
+  property double statusPressedAt: 0
 
   function sync() {
     var events = s.events.splice(0, s.events.length)
@@ -160,6 +162,11 @@ Panel {
 
   function handleKey(event) {
     var k = event.key
+    // Every button acts once per press; a held Q just keeps STATUS showing.
+    if (keyRepeat) {
+      if (k === Qt.Key_Q) qReleaseTimer.stop()
+      return true
+    }
     if (k === Qt.Key_Escape) {
       if (helpOpen) { helpOpen = false } else root.closeFullWindow()
       return true
@@ -202,24 +209,23 @@ Panel {
       return true
     }
     if (k === Qt.Key_Q) {
-      // After the whistle, STATUS resets the field for the next play (and
-      // shows where you are), just like the handhelds.
+      // STATUS can be tapped or held. Holding keeps the readout cycling
+      // through the status pages until the key is let go.
+      statusHeld = true
+      statusPressedAt = Date.now()
+      // After the whistle, STATUS also resets the field for the next play,
+      // just like the handhelds.
+      flashText = ""; flashLabel = ""
       if (phase === "dead" && !paused) {
+        // Any message from the reset (end of quarter, halftime) still shows first.
         Logic.nextPlay(s)
         sync()
-        if (phase === "presnap" && s.kind === "scrimmage") {
-          flashText = ""; flashLabel = ""
-          scoreShown = false
-          statusPage = 0
-          statusTimer.restart()
-        }
-        return true
+      } else {
+        play("blip")
       }
       scoreShown = false
-      flashText = ""; flashLabel = ""
-      statusPage = statusPage >= 2 ? 0 : statusPage + 1
+      statusPage = 0
       statusTimer.restart()
-      play("blip")
       return true
     }
     if (k === Qt.Key_R) {
@@ -239,17 +245,16 @@ Panel {
     else if (k === Qt.Key_A || k === Qt.Key_Left) dx = -1
     else if (k === Qt.Key_D || k === Qt.Key_Right) dx = 1
     if (dx !== 0 || dl !== 0) {
-      if (event.isAutoRepeat) return true
       Logic.move(s, dx, dl)
       sync()
       return true
     }
     if (k === Qt.Key_Space) {
-      if (!event.isAutoRepeat && Logic.pass(s)) sync()
+      if (Logic.pass(s)) sync()
       return true
     }
     if (k === Qt.Key_E) {
-      if (!event.isAutoRepeat && Logic.kick(s)) sync()
+      if (Logic.kick(s)) sync()
       return true
     }
     return false
@@ -292,9 +297,46 @@ Panel {
     interval: 1400
     onTriggered: {
       if (root.statusPage >= 0 && root.statusPage < 2) { root.statusPage++; restart() }
+      else if (root.statusPage >= 0 && root.statusHeld) { root.statusPage = 0; restart() }
       else { root.statusPage = -1; root.scoreShown = false }
     }
   }
+
+  // Held keys arrive as release/press pairs that are not always flagged as
+  // auto-repeat (seen on Hyprland), so a press within a few ms of the same
+  // key's release counts as a repeat, and Q's release waits that long
+  // before ending a hold.
+  readonly property int repeatGapMs: 40
+  property var keyUpAt: ({})
+  property bool keyRepeat: false
+
+  function isRepeat(event) {
+    if (event.isAutoRepeat) return true
+    var up = keyUpAt[event.key]
+    return up !== undefined && Date.now() - up < repeatGapMs
+  }
+
+  function handleKeyRelease(event) {
+    keyUpAt[event.key] = Date.now()
+    if (event.isAutoRepeat || event.key !== Qt.Key_Q || !statusHeld) return false
+    qReleaseTimer.restart()
+    return true
+  }
+
+  Timer {
+    id: qReleaseTimer
+    interval: root.repeatGapMs
+    onTriggered: {
+      root.statusHeld = false
+      // A tap lets the pages finish their cycle; letting go of a hold clears
+      // the readout right away.
+      if (Date.now() - root.statusPressedAt >= 600) {
+        statusTimer.stop()
+        root.statusPage = -1
+      }
+    }
+  }
+
 
   // ------------------------------------------------------------- open state
 
@@ -305,6 +347,7 @@ Panel {
   function closeFullWindow() {
     root.fullOpen = false
     root.helpOpen = false
+    root.statusHeld = false
     // Closing mid-play pauses so you come back to the same snap.
     if (root.phase === "live" || root.phase === "air" || root.phase === "kick") root.paused = true
   }
@@ -395,7 +438,11 @@ Panel {
         anchors.fill: parent
         focus: true
         Keys.priority: Keys.BeforeItem
-        Keys.onPressed: function(event) { if (root.handleKey(event)) event.accepted = true }
+        Keys.onPressed: function(event) {
+          root.keyRepeat = root.isRepeat(event)
+          if (root.handleKey(event)) event.accepted = true
+        }
+        Keys.onReleased: function(event) { if (root.handleKeyRelease(event)) event.accepted = true }
       }
 
       ColumnLayout {
@@ -509,7 +556,7 @@ Panel {
             KeyRow { keys: ["W", "A", "S", "D"]; label: "MOVE (ARROWS TOO)" }
             KeyRow { keys: ["SPACE"]; label: "PASS" }
             KeyRow { keys: ["E"]; label: "KICK" }
-            KeyRow { keys: ["Q"]; label: "STATUS / NEXT PLAY" }
+            KeyRow { keys: ["Q"]; label: "STATUS (HOLD) / NEXT PLAY" }
             KeyRow { keys: ["R"]; label: "SCORE" }
             KeyRow { keys: ["1", "2"]; label: "PRO 1 / PRO 2" }
             KeyRow { keys: ["P"]; label: "PAUSE" }
