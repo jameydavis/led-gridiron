@@ -1,11 +1,33 @@
 # LED Gridiron
 
-A retro handheld LED football game for [Omarchy](https://omarchy.org/). Red blips on a three-lane
-field, a 7-segment scoreboard, and piezo beeps, all running inside the Omarchy shell.
+A pocket-sized tribute to the LED handheld football games of 1978, living in your Omarchy bar.
 
 ![LED Gridiron](preview.png)
 
-You are the bright blip. Dodge the defenders, throw to the blinking receiver, and kick when you
+## Why I built this
+
+In 1978 I had an LED handheld football game, and I played it constantly. It was a little plastic
+case with a strip of red lights for a field. You were the bright one, and everybody else was
+trying to tackle you. The only sound it could make was a beep, and somehow that was all the
+stadium it needed.
+
+I've missed it for a long time. Not enough to hunt down a forty-something-year-old handheld and
+hope it still powers on, but enough that I wanted it one click away while I work. So I rebuilt it
+from memory as an Omarchy plugin.
+
+LED Gridiron sits in your bar as a small football. Click it and the handheld appears in the middle
+of your screen: a three-lane field of glowing red LEDs, a 7-segment scoreboard, and square-wave
+beeps for every step, tackle, catch and touchdown. Dodge with `W` `A` `S` `D`, throw to your
+receiver with `Space` when the lane is open, kick with `E`, and hold `Q` to read the down,
+distance and clock off the scoreboard, just like the old STATUS button. Press `Esc` and it
+gets out of your way mid-drive. It'll be right where you left it when you come back.
+
+It's an original game built in the spirit of those late-'70s handhelds, for a few minutes of
+football between whatever you're supposed to be doing.
+
+## How it plays
+
+You are the bright player. Dodge the defenders, throw to the blinking receiver, and kick when you
 run out of downs. Home runs right, Visitor runs left. One player plays both offenses against the
 computer defense, or two players pass the keyboard on each change of possession.
 
