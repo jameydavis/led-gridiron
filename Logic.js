@@ -102,20 +102,20 @@ function setupScrimmage(s) {
   s.carrier = { x: L - d, lane: 1 }
   var wide = random() < 0.5 ? 0 : 2
   s.receiver = { x: L, lane: wide, depth: rint(4, 7) }
-  // Three down linemen, two linebackers and a safety, with the linebackers
-  // and safety shuffled a little so every snap does not look the same.
-  var lb = random() < 0.5 ? [[3, 0], [3, 2]] : [[2, 0], [4, 2]]
-  var shape = s.pro === 2
-    ? [[1, 0], [1, 1], [1, 2], lb[0], lb[1], [rint(5, 7), rint(0, 2)]]
-    // Pro 1: two linemen with the middle open, a linebacker, two deep backs.
-    : [[1, 0], [1, 2], [3, 1], [5, rint(0, 1) * 2], [7, 1]]
+  // The classic handheld lineup, counted from the ball carrier on the first
+  // column: a three-man line two columns ahead, a linebacker in the middle
+  // at +4, a defender in the top lane at +6 and a deep back in the bottom
+  // lane at +9. (Offsets below are from the line of scrimmage, one column
+  // ahead of the carrier.) The receiver stays dark until the snap so the
+  // pre-snap picture is exactly this.
+  var shape = [[1, 0], [1, 1], [1, 2], [3, 1], [5, 0], [8, 2]]
   s.defenders = shape.map(function(p) { return { x: clamp(L + d * p[0], MIN_X, MAX_X), lane: p[1] } })
   snapViewport(s)
 }
 
 // Put the carrier at the near edge of the window, facing the open field.
 function snapViewport(s) {
-  var col = dir(s) > 0 ? 1 : COLS - 2
+  var col = dir(s) > 0 ? 0 : COLS - 1
   s.vx = clamp(s.carrier.x - col, MIN_X, MAX_X - COLS + 1)
 }
 
@@ -266,15 +266,16 @@ function extraPoint(s) {
 function defenseTick(s) {
   if (s.phase !== "live") return
   var c = s.carrier
-  // Pro 1: fewer defenders move each tick and even the closest one hesitates.
-  var moveChance = s.pro === 2 ? 0.75 : 0.18
-  var leadChance = s.pro === 2 ? 1.0 : 0.5
+  var pro1 = s.pro !== 2
   var order = s.defenders.map(function(_, i) { return i })
   order.sort(function(a, b) { return dist(s.defenders[a], c) - dist(s.defenders[b], c) })
   for (var k = 0; k < order.length; k++) {
     var df = s.defenders[order[k]]
-    // The closest defender leads the pursuit; the rest move on a dice roll.
-    if (random() > (k === 0 ? leadChance : moveChance)) continue
+    // Pro 2: the closest defender always pursues and the rest swarm on a
+    // dice roll. Pro 1 plays zone: only the two closest chase (and even they
+    // hesitate); everyone else holds their spot, so gaps open in the line.
+    var chance = pro1 ? (k === 0 ? 0.6 : k === 1 ? 0.3 : 0) : (k === 0 ? 1.0 : 0.75)
+    if (random() >= chance) continue
     var ddx = sign(c.x - df.x), ddl = sign(c.lane - df.lane)
     var tries = []
     if (ddx !== 0 && ddl !== 0) tries = random() < 0.5 ? [[ddx, 0], [0, ddl]] : [[0, ddl], [ddx, 0]]
@@ -284,10 +285,12 @@ function defenseTick(s) {
       var nx = df.x + tries[t][0], nl = df.lane + tries[t][1]
       if (nl < 0 || nl >= LANES) continue
       if (nx === c.x && nl === c.lane) {
-        // Pro 1: half the tackle attempts miss and the defender stays put.
-        if (s.pro !== 2 && random() < 0.5) {
+        // Pro 1: half the tackle attempts miss, and the defender who
+        // missed is knocked out of the play (their light goes out).
+        if (pro1 && random() < 0.5) {
+          s.defenders.splice(order[k], 1)
           emit(s, "thud", "", "BROKE A TACKLE")
-          break
+          return
         }
         df.x = nx; df.lane = nl
         tackle(s)
@@ -307,7 +310,15 @@ function receiverTick(s) {
   if (s.phase !== "live" || !s.receiver || s.passed) return
   var r = s.receiver, d = dir(s)
   if ((r.x - s.los) * d < r.depth) {
-    if (!occupied(s, r.x + d, r.lane)) r.x += d
+    // Run the route; if a defender is in the way, slip forward into a free
+    // neighbouring lane, or slide over to one that's open.
+    var lanes = [r.lane, r.lane - 1, r.lane + 1].filter(function(l) { return l >= 0 && l < LANES })
+    for (var i = 0; i < lanes.length; i++) {
+      if (!occupied(s, r.x + d, lanes[i])) { r.x += d; r.lane = lanes[i]; return }
+    }
+    for (var j = 1; j < lanes.length; j++) {
+      if (!occupied(s, r.x, lanes[j])) { r.lane = lanes[j]; return }
+    }
   } else if (random() < 0.3) {
     var nl = r.lane === 1 ? (random() < 0.5 ? 0 : 2) : 1
     if (!occupied(s, r.x, nl)) r.lane = nl
@@ -490,7 +501,7 @@ function leds(s, blink) {
     out[lane * COLS + col] = Math.max(out[lane * COLS + col], level)
   }
   for (var k = 0; k < s.defenders.length; k++) put(s.defenders[k].x, s.defenders[k].lane, 1)
-  if (s.receiver && blink % 2 === 0) put(s.receiver.x, s.receiver.lane, 2)
+  if (s.receiver && s.phase !== "presnap" && blink % 2 === 0) put(s.receiver.x, s.receiver.lane, 2)
   if (s.carrier && !(s.ball && s.ball.type === "pass" && s.ball.i >= 0)) {
     var waiting = s.phase === "presnap" || s.phase === "dead" || s.phase === "pat"
     if (!waiting || blink % 4 !== 3) put(s.carrier.x, s.carrier.lane, 3)

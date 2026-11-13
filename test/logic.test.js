@@ -117,6 +117,7 @@ test("tackled in your own end zone is a safety", L => {
   s.phase = "live"
   s.carrier.x = 0
   s.defenders = [{ x: -1, lane: 1 }]
+  s.pro = 2 // no broken tackles
   L.setRandom(() => 0)
   L.defenseTick(s)
   assert.strictEqual(s.score[1], 2)
@@ -209,19 +210,30 @@ test("halftime gives the second-half kickoff to the visitor", L => {
   assert.strictEqual(s.kind, "return")
 })
 
+test("the starting lineup matches the classic handheld formation", L => {
+  const s = scrimmageAt(L, 30)
+  const m = L.leds(s, 0)
+  const rows = [0, 1, 2].map(r => m.slice(r * 10, r * 10 + 10).map(v => v ? (v === 3 ? "C" : "d") : ".").join(""))
+  assert.deepStrictEqual(rows, ["..d...d...", "C.d.d.....", "..d......d"])
+  const v = scrimmageAt(L, 70, 1) // visitor: mirrored left-to-right
+  const mv = L.leds(v, 0)
+  const vrows = [0, 1, 2].map(r => mv.slice(r * 10, r * 10 + 10).map(x => x ? (x === 3 ? "C" : "d") : ".").join(""))
+  assert.deepStrictEqual(vrows, ["...d...d..", ".....d.d.C", "d......d.."])
+})
+
 test("the screen stays put, then wraps 10 yards when the carrier runs off the edge", L => {
   const s = scrimmageAt(L, 30)
   s.receiver = null
   s.defenders = [{ x: 33, lane: 0 }, { x: 36, lane: 2 }]
   const vx0 = s.vx
-  assert.strictEqual(s.carrier.x - vx0, 1)
-  for (let i = 0; i < 8; i++) L.move(s, 1, 0) // 29 -> 37, the last column
+  assert.strictEqual(s.carrier.x - vx0, 0)
+  for (let i = 0; i < 9; i++) L.move(s, 1, 0) // 29 -> 38, the last column
   assert.strictEqual(s.vx, vx0, "no scrolling inside a screen")
   assert.strictEqual(s.carrier.x - s.vx, 9)
   L.move(s, 1, 0) // off the edge
   assert.strictEqual(s.vx, vx0 + 10)
   assert.strictEqual(s.carrier.x - s.vx, 0, "carrier reappears on the near edge")
-  assert.deepStrictEqual(s.defenders.map(d => d.x - s.vx), [5, 8], "defenders keep their screen spots")
+  assert.deepStrictEqual(s.defenders.map(d => d.x - s.vx), [4, 7], "defenders keep their screen spots")
 })
 
 test("Pro 1 defense moves less often than Pro 2", L => {
@@ -245,19 +257,17 @@ test("backing off the rear edge is blocked; only forward runs wrap", L => {
   s.receiver = null
   s.defenders = [{ x: 45, lane: 1 }]
   const vx0 = s.vx
-  L.move(s, -1, 0) // 29 -> 28, column 0
-  assert.strictEqual(s.carrier.x - s.vx, 0)
-  L.move(s, -1, 0) // would leave the screen backward: no-op
-  assert.strictEqual(s.carrier.x, 28)
+  L.move(s, -1, 0) // carrier starts on column 0: can't back off the screen
+  assert.strictEqual(s.carrier.x, 29)
   assert.strictEqual(s.vx, vx0)
-  const v = scrimmageAt(L, 70, 1) // visitor runs left, rear edge is the right side
+  assert.strictEqual(s.phase, "live")
+  const v = scrimmageAt(L, 70, 1) // visitor runs left; its rear edge is the right side
   v.receiver = null
   v.defenders = [{ x: 50, lane: 1 }]
-  L.move(v, 1, 0)
-  L.move(v, 1, 0)
   assert.strictEqual(v.carrier.x - v.vx, 9)
-  assert.strictEqual(v.vx, v.vx, "no wrap")
-  assert.strictEqual(v.carrier.x, 72)
+  L.move(v, 1, 0)
+  assert.strictEqual(v.carrier.x, 71)
+  assert.strictEqual(v.vx, 62)
 })
 
 // A greedy runner: step forward when it keeps out of reach, else sidestep.

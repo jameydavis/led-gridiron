@@ -31,7 +31,7 @@ omarchy-shell jameydavis.led-gridiron toggle
 | `E` | **Kick**. Before the snap: a field goal inside the opponent's 38, otherwise a punt. Also kicks the extra point |
 | `Q` | **Status**: after the whistle, sets up the next play. Tap to cycle field position, down and distance, and time left once; hold to keep the readout cycling until you let go |
 | `R` | **Score**: Home and Visitor. Tap for a quick look, hold to keep it up until you let go |
-| `1` / `2` | **Pro 1**: five slow defenders in a loose formation who miss half their tackles. **Pro 2**: six fast defenders in a wall. Switch between plays |
+| `1` / `2` | **Pro 1**: zone defense (only the two closest defenders chase), and a defender who misses a tackle is knocked out of the play. **Pro 2**: the whole defense swarms. Switch between plays |
 | `P` | Pause |
 | `M` | Sound on/off |
 | `N` `N` | New game (press twice) |
@@ -44,6 +44,8 @@ omarchy-shell jameydavis.led-gridiron toggle
   yards, with the defenders keeping their spots on the glass, until you reach the end zone. You
   can't back off the rear edge.
 - After every play, press STATUS (`Q`) to reset the field for the next snap.
+- Every snap starts from the classic lineup: you on the first column, a three-man line two
+  columns ahead, a linebacker in the middle, a defender up top and a deep back at the far end.
 - Four 5:00 quarters. The clock runs during plays, and each tackle runs off 8 more seconds.
 - Gain 10 yards in four downs for a first down, or the ball turns over at the spot.
 - Touchdown 6, extra point 1, field goal 3, safety 2.
