@@ -107,10 +107,10 @@ function setupScrimmage(s) {
 
 // The classic handheld lineup, used for every kickoff return and every snap.
 // [columns ahead of the ball carrier, lane]: a three-man line three columns
-// ahead, a linebacker in the middle at +4, a defender in the top lane at +6
+// ahead, a linebacker in the middle at +5, a defender in the top lane at +6
 // and a deep back in the bottom lane at +9.
 var LINE_COLUMN = 3
-var FORMATION = [[LINE_COLUMN, 0], [LINE_COLUMN, 1], [LINE_COLUMN, 2], [4, 1], [6, 0], [9, 2]]
+var FORMATION = [[LINE_COLUMN, 0], [LINE_COLUMN, 1], [LINE_COLUMN, 2], [5, 1], [6, 0], [9, 2]]
 
 function lineUp(s, carrierX) {
   var d = dir(s)

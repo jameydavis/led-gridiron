@@ -267,11 +267,11 @@ test("the starting lineup matches the classic handheld formation", L => {
   const s = scrimmageAt(L, 30)
   const m = L.leds(s, 0)
   const rows = [0, 1, 2].map(r => m.slice(r * 10, r * 10 + 10).map(v => v ? (v === 3 ? "C" : "d") : ".").join(""))
-  assert.deepStrictEqual(rows, ["...d..d...", "C..dd.....", "...d.....d"])
+  assert.deepStrictEqual(rows, ["...d..d...", "C..d.d....", "...d.....d"])
   const v = scrimmageAt(L, 70, 1) // visitor: mirrored left-to-right
   const mv = L.leds(v, 0)
   const vrows = [0, 1, 2].map(r => mv.slice(r * 10, r * 10 + 10).map(x => x ? (x === 3 ? "C" : "d") : ".").join(""))
-  assert.deepStrictEqual(vrows, ["...d..d...", ".....dd..C", "d.....d..."])
+  assert.deepStrictEqual(vrows, ["...d..d...", "....d.d..C", "d.....d..."])
 })
 
 test("kickoff returns start from the same lineup, on both Pro levels", L => {
@@ -280,7 +280,7 @@ test("kickoff returns start from the same lineup, on both Pro levels", L => {
     assert.strictEqual(s.kind, "return")
     const m = L.leds(s, 0)
     const rows = [0, 1, 2].map(r => m.slice(r * 10, r * 10 + 10).map(v => v ? (v === 3 ? "C" : "d") : ".").join(""))
-    assert.deepStrictEqual(rows, ["...d..d...", "C..dd.....", "...d.....d"], "pro " + pro)
+    assert.deepStrictEqual(rows, ["...d..d...", "C..d.d....", "...d.....d"], "pro " + pro)
   }
 })
 
