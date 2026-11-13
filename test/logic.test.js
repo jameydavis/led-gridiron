@@ -69,9 +69,11 @@ test("running into a defender is a tackle and a down is used", L => {
 
 test("ten yards is a first down", L => {
   const s = scrimmageAt(L, 30)
-  s.defenders = [{ x: 45, lane: 1 }]
+  s.defenders = []
   s.receiver = null
-  for (let i = 0; i < 16; i++) L.move(s, 1, 0)
+  for (let i = 0; i < 15; i++) L.move(s, 1, 0) // 29 -> 44
+  s.defenders = [{ x: 45, lane: 1 }]
+  L.move(s, 1, 0)
   assert.strictEqual(s.los, 44)
   assert.strictEqual(s.down, 1)
   assert.ok(s.events.some(e => e.code === "1ST"))
@@ -115,6 +117,7 @@ test("tackled in your own end zone is a safety", L => {
   s.phase = "live"
   s.carrier.x = 0
   s.defenders = [{ x: -1, lane: 1 }]
+  L.setRandom(() => 0)
   L.defenseTick(s)
   assert.strictEqual(s.score[1], 2)
   L.nextPlay(s)
@@ -204,6 +207,37 @@ test("halftime gives the second-half kickoff to the visitor", L => {
   assert.strictEqual(s.quarter, 3)
   assert.strictEqual(s.poss, 1)
   assert.strictEqual(s.kind, "return")
+})
+
+test("the screen stays put, then wraps 10 yards when the carrier runs off the edge", L => {
+  const s = scrimmageAt(L, 30)
+  s.receiver = null
+  s.defenders = [{ x: 33, lane: 0 }, { x: 36, lane: 2 }]
+  const vx0 = s.vx
+  assert.strictEqual(s.carrier.x - vx0, 1)
+  for (let i = 0; i < 8; i++) L.move(s, 1, 0) // 29 -> 37, the last column
+  assert.strictEqual(s.vx, vx0, "no scrolling inside a screen")
+  assert.strictEqual(s.carrier.x - s.vx, 9)
+  L.move(s, 1, 0) // off the edge
+  assert.strictEqual(s.vx, vx0 + 10)
+  assert.strictEqual(s.carrier.x - s.vx, 0, "carrier reappears on the near edge")
+  assert.deepStrictEqual(s.defenders.map(d => d.x - s.vx), [5, 8], "defenders keep their screen spots")
+})
+
+test("Pro 1 defense moves less often than Pro 2", L => {
+  let moves = { 1: 0, 2: 0 }
+  for (const pro of [1, 2]) {
+    for (let t = 0; t < 300; t++) {
+      const s = scrimmageAt(L, 30)
+      s.pro = pro
+      s.phase = "live"
+      s.defenders = [{ x: 40, lane: 0 }, { x: 40, lane: 2 }, { x: 38, lane: 1 }]
+      const before = JSON.stringify(s.defenders)
+      L.defenseTick(s)
+      s.defenders.forEach((d, i) => { if (JSON.stringify(d) !== JSON.stringify(JSON.parse(before)[i])) moves[pro]++ })
+    }
+  }
+  assert.ok(moves[1] < moves[2] * 0.7, JSON.stringify(moves))
 })
 
 test("fuzz: random full games never break invariants", L => {

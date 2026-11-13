@@ -111,6 +111,10 @@ Panel {
     if (scoreShown || phase === "gameover") return scoreText()
     if (statusPage >= 0) return statusText(statusPage)
     if (paused) return { text: "PAUS", colon: false, label: "PAUSED - P TO RESUME" }
+    if (phase === "dead") {
+      var after = statusText(1)
+      return { text: after.text, colon: false, label: "PRESS Q (STATUS) FOR NEXT PLAY" }
+    }
     if (phase === "pat") return { text: " PAt", colon: false, label: "EXTRA POINT - PRESS KICK" }
     if (phase === "presnap" && s.kind === "return")
       return { text: " " + Logic.clockText(s).replace(":", ""), colon: true,
@@ -183,11 +187,24 @@ Panel {
       if (phase === "live" || phase === "air" || phase === "kick") return true
       s.pro = k === Qt.Key_1 ? 1 : 2
       play("blip")
-      flash("Pro" + s.pro, "PRO " + s.pro + (s.pro === 1 ? " - ROOKIE DEFENSE" : " - FAST DEFENSE"))
+      flash("Pro" + s.pro, "PRO " + s.pro + (s.pro === 1 ? " - SLOW DEFENSE" : " - FAST DEFENSE"))
       rev++
       return true
     }
     if (k === Qt.Key_Q) {
+      // After the whistle, STATUS resets the field for the next play (and
+      // shows where you are), just like the handhelds.
+      if (phase === "dead" && !paused) {
+        Logic.nextPlay(s)
+        sync()
+        if (phase === "presnap" && s.kind === "scrimmage") {
+          flashText = ""; flashLabel = ""
+          scoreShown = false
+          statusPage = 0
+          statusTimer.restart()
+        }
+        return true
+      }
       scoreShown = false
       flashText = ""; flashLabel = ""
       statusPage = statusPage >= 2 ? 0 : statusPage + 1
@@ -235,7 +252,7 @@ Panel {
     onTriggered: root.blink = (root.blink + 1) % 1000
   }
   Timer {
-    interval: root.s.pro === 2 ? 360 : 540
+    interval: root.s.pro === 2 ? 360 : 760
     repeat: true
     running: root.active && root.phase === "live"
     onTriggered: { Logic.defenseTick(root.s); root.sync() }
@@ -254,11 +271,6 @@ Panel {
     interval: 65; repeat: true
     running: root.active && (root.phase === "air" || root.phase === "kick")
     onTriggered: { Logic.ballTick(root.s); root.sync() }
-  }
-  Timer {
-    interval: Logic.DEAD_MS; repeat: true
-    running: root.active && root.phase === "dead"
-    onTriggered: { Logic.nextPlay(root.s); root.sync() }
   }
   Timer {
     id: flashTimer
@@ -487,7 +499,7 @@ Panel {
             KeyRow { keys: ["W", "A", "S", "D"]; label: "MOVE (ARROWS TOO)" }
             KeyRow { keys: ["SPACE"]; label: "PASS" }
             KeyRow { keys: ["E"]; label: "KICK" }
-            KeyRow { keys: ["Q"]; label: "STATUS" }
+            KeyRow { keys: ["Q"]; label: "STATUS / NEXT PLAY" }
             KeyRow { keys: ["R"]; label: "SCORE" }
             KeyRow { keys: ["1", "2"]; label: "PRO 1 / PRO 2" }
             KeyRow { keys: ["P"]; label: "PAUSE" }
@@ -504,9 +516,10 @@ Panel {
               wrapMode: Text.WordWrap
               color: root.inkDim
               font.pixelSize: root.u * 1.0
-              text: "YOU ARE THE BRIGHT BLIP. ANY MOVE SNAPS THE BALL. PASS TO THE BLINKING RECEIVER "
-                + "BEFORE YOU CROSS THE LINE. KICK BEFORE THE SNAP: A FIELD GOAL INSIDE THE "
-                + "OPPONENT'S 38, A PUNT FROM ANYWHERE ELSE. HOME RUNS RIGHT, VISITOR RUNS LEFT."
+              text: "YOU ARE THE BRIGHT BLIP. ANY MOVE SNAPS THE BALL. RUN OFF THE EDGE AND THE FIELD "
+                + "WRAPS TO THE NEXT 10 YARDS. PASS TO THE BLINKING RECEIVER BEFORE YOU CROSS THE LINE. "
+                + "AFTER THE WHISTLE PRESS STATUS TO SET UP THE NEXT PLAY. KICK BEFORE THE SNAP: A FIELD "
+                + "GOAL INSIDE THE OPPONENT'S 38, A PUNT FROM ANYWHERE ELSE. HOME RUNS RIGHT, VISITOR RUNS LEFT."
             }
           }
         }

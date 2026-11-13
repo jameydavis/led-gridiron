@@ -17,7 +17,6 @@ var MIN_X = -9
 var MAX_X = 109
 var QUARTER_SECONDS = 300
 var RUNOFF_SECONDS = 8
-var DEAD_MS = 1700
 
 // Mutable so tests can make plays deterministic.
 var random = Math.random
@@ -114,14 +113,29 @@ function snapViewport(s) {
   s.vx = clamp(s.carrier.x - col, MIN_X, MAX_X - COLS + 1)
 }
 
-function followViewport(s) {
+// The display does not scroll. When the carrier runs off either edge, the
+// field wraps to the next 10-yard screen: the carrier reappears on the
+// opposite edge and everyone else keeps their spot on the glass, so the
+// defense you just beat is in front of you again.
+function wrapScreen(s) {
   if (!s.carrier) return
   var col = s.carrier.x - s.vx
-  var lo = dir(s) > 0 ? 1 : 3
-  var hi = dir(s) > 0 ? 6 : 8
-  if (col > hi) s.vx = s.carrier.x - hi
-  else if (col < lo) s.vx = s.carrier.x - lo
-  s.vx = clamp(s.vx, MIN_X, MAX_X - COLS + 1)
+  if (col >= 0 && col < COLS) return
+  var shift = col >= COLS ? COLS : -COLS
+  var nvx = clamp(s.vx + shift, MIN_X, MAX_X - COLS + 1)
+  var delta = nvx - s.vx
+  s.vx = nvx
+  var seen = {}
+  s.defenders = s.defenders.filter(function(df) {
+    df.x = clamp(df.x + delta, MIN_X, MAX_X)
+    var key = df.x + ":" + df.lane
+    if (seen[key] || (df.x === s.carrier.x && df.lane === s.carrier.lane)) return false
+    seen[key] = true
+    return true
+  })
+  // The receiver's route was on the old screen; no pass after a wrap.
+  s.receiver = null
+  emit(s, "wrap")
 }
 
 // ---------------------------------------------------------------- queries
@@ -179,7 +193,7 @@ function move(s, dx, dl) {
   c.x = nx
   c.lane = nl
   emit(s, "step")
-  followViewport(s)
+  wrapScreen(s)
   if (inScoringZone(s.poss, c.x)) touchdown(s)
 }
 
@@ -242,13 +256,15 @@ function extraPoint(s) {
 function defenseTick(s) {
   if (s.phase !== "live") return
   var c = s.carrier
-  var moveChance = s.pro === 2 ? 0.75 : 0.55
+  // Pro 1: fewer defenders move each tick and even the closest one hesitates.
+  var moveChance = s.pro === 2 ? 0.75 : 0.3
+  var leadChance = s.pro === 2 ? 1.0 : 0.7
   var order = s.defenders.map(function(_, i) { return i })
   order.sort(function(a, b) { return dist(s.defenders[a], c) - dist(s.defenders[b], c) })
   for (var k = 0; k < order.length; k++) {
     var df = s.defenders[order[k]]
-    // The closest defender always pursues; the rest move on a dice roll.
-    if (k > 0 && random() > moveChance) continue
+    // The closest defender leads the pursuit; the rest move on a dice roll.
+    if (random() > (k === 0 ? leadChance : moveChance)) continue
     var ddx = sign(c.x - df.x), ddl = sign(c.lane - df.lane)
     var tries = []
     if (ddx !== 0 && ddl !== 0) tries = random() < 0.5 ? [[ddx, 0], [0, ddl]] : [[0, ddl], [ddx, 0]]
@@ -318,7 +334,7 @@ function catchOrDrop(s) {
   s.receiver = null
   s.phase = "live"
   emit(s, "catch", "CATCH", "PASS COMPLETE")
-  followViewport(s)
+  wrapScreen(s)
   if (inScoringZone(s.poss, s.carrier.x)) touchdown(s)
 }
 
@@ -410,7 +426,7 @@ function deadBall(s, next, runoff) {
   if (runoff) s.clock = Math.max(0, s.clock - RUNOFF_SECONDS)
 }
 
-// Called by the host once the dead-ball pause is over.
+// Called when the player presses STATUS to reset for the next play.
 function nextPlay(s) {
   if (s.phase !== "dead") return
   var next = s.next || { type: "scrimmage" }
