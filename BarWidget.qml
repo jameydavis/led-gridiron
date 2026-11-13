@@ -45,6 +45,10 @@ Panel {
   readonly property bool active: fullOpen && !paused && !helpOpen
 
   readonly property var ledLevels: { rev; blink; return Logic.leds(s, blink) }
+  // `s` is mutated in place, so anything on the face that shows game state
+  // must go through `rev` (bumped on every change) to stay current.
+  readonly property int poss: { rev; return s.poss }
+  readonly property int pro: { rev; return s.pro }
 
   // Transient readout content: a flashed message or a STATUS / SCORE page.
   property string flashText: ""
@@ -273,7 +277,7 @@ Panel {
     onTriggered: root.blink = (root.blink + 1) % 1000
   }
   Timer {
-    interval: root.s.pro === 2 ? 360 : 1000
+    interval: root.pro === 2 ? 360 : 1000
     repeat: true
     running: root.active && root.phase === "live"
     onTriggered: { Logic.defenseTick(root.s); root.sync() }
@@ -473,7 +477,7 @@ Panel {
           Layout.alignment: Qt.AlignHCenter
           spacing: root.u * 2.2
 
-          Lamp { text: "HOME"; lit: root.s.poss === 0 && root.phase !== "gameover"; Layout.alignment: Qt.AlignVCenter }
+          Lamp { text: "HOME"; lit: root.poss === 0 && root.phase !== "gameover"; Layout.alignment: Qt.AlignVCenter }
 
           Rectangle {
             Layout.alignment: Qt.AlignVCenter
@@ -515,7 +519,7 @@ Panel {
             }
           }
 
-          Lamp { text: "VISITOR"; lit: root.s.poss === 1 && root.phase !== "gameover"; Layout.alignment: Qt.AlignVCenter }
+          Lamp { text: "VISITOR"; lit: root.poss === 1 && root.phase !== "gameover"; Layout.alignment: Qt.AlignVCenter }
         }
 
         PlainLabel {
@@ -537,12 +541,12 @@ Panel {
         RowLayout {
           Layout.fillWidth: true
           spacing: root.u * 1.6
-          Lamp { text: "PRO 1"; lit: root.s.pro === 1 }
-          Lamp { text: "PRO 2"; lit: root.s.pro === 2 }
+          Lamp { text: "PRO 1"; lit: root.pro === 1 }
+          Lamp { text: "PRO 2"; lit: root.pro === 2 }
           Lamp { text: "SOUND"; lit: !root.muted }
           Item { Layout.fillWidth: true }
           PlainLabel {
-            text: root.s.poss === 0 ? "HOME  ▶▶" : "◀◀  VISITOR"
+            text: root.poss === 0 ? "HOME  ▶▶" : "◀◀  VISITOR"
             color: root.inkDim
             font.pixelSize: root.u * 1.0
           }

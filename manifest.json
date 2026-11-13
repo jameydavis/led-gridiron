@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "jameydavis.led-gridiron",
   "name": "LED Gridiron",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Jamey Davis",
   "license": "MIT",
   "description": "A tribute to the 1978 LED handheld football games: glowing red players on a 3-lane field, one click from your bar",
