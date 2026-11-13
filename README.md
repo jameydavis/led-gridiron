@@ -27,7 +27,7 @@ omarchy-shell jameydavis.led-gridiron toggle
 | Key | Button |
 | --- | --- |
 | `W` `A` `S` `D` (or arrows) | Move one step per press. The first move snaps the ball |
-| `Space` | **Pass** to the blinking receiver (only before you cross the line of scrimmage) |
+| `Space` | **Pass** to the blinking receiver, before you cross the line of scrimmage. It's caught only if the lane is open |
 | `E` | **Kick**. Before the snap: a field goal inside the opponent's 38, otherwise a punt. Also kicks the extra point |
 | `Q` | **Status**: after the whistle, sets up the next play. Tap to cycle field position, down and distance, and time left once; hold to keep the readout cycling until you let go |
 | `R` | **Score**: Home and Visitor. Tap for a quick look, hold to keep it up until you let go |
@@ -49,7 +49,9 @@ omarchy-shell jameydavis.led-gridiron toggle
 - Four 5:00 quarters. The clock runs during plays, and each tackle runs off 8 more seconds.
 - Gain 10 yards in four downs for a first down, or the ball turns over at the spot.
 - Touchdown 6, extra point 1, field goal 3, safety 2.
-- Passes fly cell by cell, and any defender in the path intercepts. A covered receiver can drop it.
+- At the snap the receiver lights up just behind the defensive line and runs a route. A pass
+  is caught only if its lane is open (no defender on the straight path to the receiver). A
+  blocked pass is knocked down, and sometimes intercepted.
 - The opening kickoff goes to Home and the second-half kickoff to Visitor. After a score, the
   other team receives.
 

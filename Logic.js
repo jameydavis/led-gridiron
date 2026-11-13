@@ -97,9 +97,10 @@ function setupScrimmage(s) {
   s.kickPlan = null
   s.carrier = { x: L - d, lane: 1 }
   var wide = random() < 0.5 ? 0 : 2
-  // The receiver stays dark until the snap so the pre-snap picture is
-  // exactly the classic lineup.
-  s.receiver = { x: L, lane: wide, depth: rint(4, 7) }
+  // The receiver lines up behind the defensive line (one column past the
+  // three linemen), in the top or bottom lane. It stays dark until the snap
+  // so the pre-snap picture is exactly the classic lineup.
+  s.receiver = { x: L + 2 * d, lane: wide, depth: rint(4, 7) }
   s.defenders = lineUp(s, s.carrier.x)
   snapViewport(s)
 }
@@ -211,15 +212,7 @@ function move(s, dx, dl) {
 
 function pass(s) {
   if (!canPass(s)) return false
-  var c = s.carrier, r = s.receiver
-  var n = Math.max(Math.abs(r.x - c.x), Math.abs(r.lane - c.lane))
-  var path = []
-  for (var i = 1; i <= n; i++) {
-    path.push({
-      x: c.x + Math.round((r.x - c.x) * i / n),
-      lane: c.lane + Math.round((r.lane - c.lane) * i / n)
-    })
-  }
+  var path = passPath(s)
   s.passed = true
   s.ball = { path: path, i: -1, type: "pass" }
   s.phase = "air"
@@ -338,7 +331,7 @@ function ballTick(s) {
   if (s.ball.type === "pass") {
     if (s.ball.i >= s.ball.path.length) { catchOrDrop(s); return false }
     var cell = s.ball.path[s.ball.i]
-    if (defenderAt(s, cell.x, cell.lane) >= 0) { interception(s, cell.x); return false }
+    if (defenderAt(s, cell.x, cell.lane) >= 0) { passBlocked(s, cell.x); return false }
     return true
   }
   if (s.ball.i >= s.ball.path.length) { resolveKick(s); return false }
@@ -347,23 +340,45 @@ function ballTick(s) {
 
 // ---------------------------------------------------------------- outcomes
 
+// The ball made it through an open lane: the receiver always catches it.
 function catchOrDrop(s) {
   var r = s.receiver
-  var covered = s.defenders.some(function(df) {
-    return Math.abs(df.x - r.x) <= 1 && Math.abs(df.lane - r.lane) <= 1
-  })
   s.ball = null
-  if (covered && random() < 0.35) {
-    emit(s, "incomplete", "INC", "INCOMPLETE")
-    advanceDown(s, s.los, false)
-    return
-  }
   s.carrier = { x: r.x, lane: r.lane }
   s.receiver = null
   s.phase = "live"
   emit(s, "catch", "CATCH", "PASS COMPLETE")
   wrapScreen(s)
   if (inScoringZone(s.poss, s.carrier.x)) touchdown(s)
+}
+
+// Is the straight throwing path from the carrier to the receiver free of
+// defenders? Only then can the receiver catch the ball.
+function passPath(s) {
+  var c = s.carrier, r = s.receiver
+  var n = Math.max(Math.abs(r.x - c.x), Math.abs(r.lane - c.lane))
+  var path = []
+  for (var i = 1; i <= n; i++) {
+    path.push({
+      x: c.x + Math.round((r.x - c.x) * i / n),
+      lane: c.lane + Math.round((r.lane - c.lane) * i / n)
+    })
+  }
+  return path
+}
+
+function laneOpen(s) {
+  if (!s.receiver || !s.carrier) return false
+  return passPath(s).every(function(cell) { return defenderAt(s, cell.x, cell.lane) < 0 })
+}
+
+// A defender stands in the throwing lane: the pass is knocked down, and
+// now and then picked off.
+function passBlocked(s, x) {
+  s.ball = null
+  if (random() < 0.25) { interception(s, x); return }
+  emit(s, "incomplete", "INC", "PASS BLOCKED")
+  advanceDown(s, s.los, false)
 }
 
 function interception(s, x) {

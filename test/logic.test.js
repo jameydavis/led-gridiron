@@ -6,7 +6,7 @@ const assert = require("assert")
 
 function load() {
   const src = fs.readFileSync(path.join(__dirname, "..", "Logic.js"), "utf8").replace(/^\.pragma library/m, "")
-  const names = ["newGame", "move", "pass", "kick", "defenseTick", "receiverTick", "clockTick", "ballTick",
+  const names = ["laneOpen", "newGame", "move", "pass", "kick", "defenseTick", "receiverTick", "clockTick", "ballTick",
     "nextPlay", "leds", "fieldPosition", "clockText", "canPass", "fieldGoalDistance", "setupScrimmage",
     "COLS", "LANES", "QUARTER_SECONDS"]
   const L = new Function(src + "\nreturn {" + names.join(",") +
@@ -141,7 +141,8 @@ test("completed pass hands the ball to the receiver", L => {
   assert.ok(!L.canPass(s), "only one pass per play")
 })
 
-test("a defender in the passing lane intercepts", L => {
+test("a blocked passing lane is sometimes intercepted", L => {
+  L.setRandom(() => 0.1) // under the 25% pick-off roll
   const s = scrimmageAt(L, 30)
   s.receiver = { x: 35, lane: 1, depth: 5 }
   s.defenders = [{ x: 32, lane: 1 }]
@@ -153,6 +154,53 @@ test("a defender in the passing lane intercepts", L => {
   L.nextPlay(s)
   assert.strictEqual(s.poss, 1)
   assert.strictEqual(s.los, 32)
+})
+
+test("a blocked passing lane usually knocks the pass down: no catch, a down is used", L => {
+  L.setRandom(() => 0.9)
+  const s = scrimmageAt(L, 30)
+  s.receiver = { x: 35, lane: 1, depth: 5 }
+  s.defenders = [{ x: 32, lane: 1 }]
+  L.move(s, 0, 0)
+  s.phase = "live"
+  assert.ok(!L.laneOpen(s))
+  L.pass(s)
+  while (L.ballTick(s)) {}
+  assert.ok(s.events.some(e => e.label === "PASS BLOCKED"))
+  assert.strictEqual(s.receiver.x, 35, "the receiver never got the ball")
+  assert.strictEqual(s.down, 2)
+  assert.strictEqual(s.los, 30)
+})
+
+test("an open lane is always a catch, even with a defender right next to the receiver", L => {
+  for (const r of [0, 0.3, 0.99]) {
+    L.setRandom(() => r)
+    const s = scrimmageAt(L, 30)
+    s.receiver = { x: 34, lane: 0, depth: 5 }
+    s.defenders = [{ x: 35, lane: 0 }, { x: 34, lane: 1 }] // covering, but not in the path
+    L.move(s, 0, -1) // snap, carrier to lane 0: path runs straight along the top lane
+    assert.ok(L.laneOpen(s))
+    L.pass(s)
+    while (L.ballTick(s)) {}
+    assert.deepStrictEqual(s.carrier, { x: 34, lane: 0 }, "random " + r)
+  }
+})
+
+test("the receiver appears behind the defensive line at the snap", L => {
+  const s = scrimmageAt(L, 30)
+  // Hidden before the snap...
+  assert.ok(!L.leds(s, 0).includes(2))
+  // ...one column past the three-man line, in the top or bottom lane.
+  assert.strictEqual(s.receiver.x, 32)
+  assert.ok(s.receiver.lane === 0 || s.receiver.lane === 2)
+  const line = s.defenders.filter(d => d.x === 31).length
+  assert.strictEqual(line, 3)
+  L.move(s, 0, 0)
+  s.phase = "live"
+  const m = L.leds(s, 0)
+  assert.strictEqual(m[s.receiver.lane * 10 + (s.receiver.x - s.vx)], 2)
+  const v = scrimmageAt(L, 70, 1) // visitor attacks left
+  assert.strictEqual(v.receiver.x, 68)
 })
 
 test("no pass once the carrier is past the line of scrimmage", L => {
