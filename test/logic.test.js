@@ -240,6 +240,58 @@ test("Pro 1 defense moves less often than Pro 2", L => {
   assert.ok(moves[1] < moves[2] * 0.7, JSON.stringify(moves))
 })
 
+test("backing off the rear edge is blocked; only forward runs wrap", L => {
+  const s = scrimmageAt(L, 30)
+  s.receiver = null
+  s.defenders = [{ x: 45, lane: 1 }]
+  const vx0 = s.vx
+  L.move(s, -1, 0) // 29 -> 28, column 0
+  assert.strictEqual(s.carrier.x - s.vx, 0)
+  L.move(s, -1, 0) // would leave the screen backward: no-op
+  assert.strictEqual(s.carrier.x, 28)
+  assert.strictEqual(s.vx, vx0)
+  const v = scrimmageAt(L, 70, 1) // visitor runs left, rear edge is the right side
+  v.receiver = null
+  v.defenders = [{ x: 50, lane: 1 }]
+  L.move(v, 1, 0)
+  L.move(v, 1, 0)
+  assert.strictEqual(v.carrier.x - v.vx, 9)
+  assert.strictEqual(v.vx, v.vx, "no wrap")
+  assert.strictEqual(v.carrier.x, 72)
+})
+
+// A greedy runner: step forward when it keeps out of reach, else sidestep.
+function botStep(L, s) {
+  const d = s.poss === 0 ? 1 : -1, c = s.carrier
+  let best = null, bestScore = -1e9
+  for (const [dx, dl] of [[d, 0], [0, -1], [0, 1], [0, 0]]) {
+    const x = c.x + dx, l = c.lane + dl
+    if (l < 0 || l > 2 || s.defenders.some(df => df.x === x && df.lane === l)) continue
+    const minD = Math.min(99, ...s.defenders.map(df => Math.abs(df.x - x) + Math.abs(df.lane - l)))
+    const score = (minD >= 2 ? 100 : minD * 10) + dx * d * 3 + minD
+    if (score > bestScore) { bestScore = score; best = [dx, dl] }
+  }
+  if (best && (best[0] || best[1])) L.move(s, best[0], best[1])
+}
+
+test("Pro 1 is beatable: a simple running bot scores on a good share of drives", L => {
+  const N = 300
+  let tds = 0
+  for (let g = 0; g < N; g++) {
+    const s = L.newGame(1)
+    for (let p = 0; p < 60 && s.poss === 0 && s.score[0] < 6 && s.phase !== "gameover"; p++) {
+      L.move(s, 1, 0)
+      // 3 keypresses per 1-second Pro 1 defense tick
+      for (let t = 0; t < 3000 && s.phase === "live"; t++) t % 4 === 3 ? L.defenseTick(s) : botStep(L, s)
+      s.events.length = 0
+      if (s.phase === "dead") L.nextPlay(s)
+    }
+    if (s.score[0] >= 6) tds++
+  }
+  console.log("     Pro 1 drive touchdown rate for the bot: " + Math.round(100 * tds / N) + "%")
+  assert.ok(tds / N > 0.15, "touchdown rate " + tds / N)
+})
+
 test("fuzz: random full games never break invariants", L => {
   for (let g = 0; g < 200; g++) {
     const s = L.newGame(g % 2 ? 2 : 1)

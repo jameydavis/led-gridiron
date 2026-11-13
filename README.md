@@ -31,7 +31,7 @@ omarchy-shell jameydavis.led-gridiron toggle
 | `E` | **Kick**. Before the snap: a field goal inside the opponent's 38, otherwise a punt. Also kicks the extra point |
 | `Q` | **Status**: after the whistle, sets up the next play. Otherwise shows field position, down and distance, then time left |
 | `R` | **Score**: Home and Visitor |
-| `1` / `2` | **Pro 1** (slow, hesitant defense) / **Pro 2** (fast defense), switchable between plays |
+| `1` / `2` | **Pro 1**: five slow defenders in a loose formation who miss half their tackles. **Pro 2**: six fast defenders in a wall. Switch between plays |
 | `P` | Pause |
 | `M` | Sound on/off |
 | `N` `N` | New game (press twice) |
@@ -40,8 +40,9 @@ omarchy-shell jameydavis.led-gridiron toggle
 
 ## Rules
 
-- The field doesn't scroll. Run off the edge of the display and it wraps to the next 10 yards,
-  with the defenders keeping their spots on the glass, until you reach the end zone.
+- The field doesn't scroll. Run off the front edge of the display and it wraps to the next 10
+  yards, with the defenders keeping their spots on the glass, until you reach the end zone. You
+  can't back off the rear edge.
 - After every play, press STATUS (`Q`) to reset the field for the next snap.
 - Four 5:00 quarters. The clock runs during plays, and each tackle runs off 8 more seconds.
 - Gain 10 yards in four downs for a first down, or the ball turns over at the spot.
@@ -53,7 +54,8 @@ omarchy-shell jameydavis.led-gridiron toggle
 ## Requirements
 
 - Omarchy with the Quickshell-based `omarchy-shell`
-- `pw-play` (PipeWire, standard on Omarchy) for sound
+- `pw-play` / `pw-cat` (PipeWire, standard on Omarchy) for sound. While the game is open, it holds
+  a silent stream so the audio output doesn't fall asleep between plays and swallow beeps.
 
 ## Development
 

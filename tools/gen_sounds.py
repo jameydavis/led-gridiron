@@ -43,7 +43,10 @@ def rest(ms):
 
 
 def write(name, *parts):
-    samples = [s for part in parts for s in part]
+    # Lead-in and tail silence: DSP sinks (e.g. the Apple Silicon speaker
+    # convolver, ~170 ms of latency) drop a stream's last samples when the
+    # stream disconnects, which swallows short beeps entirely.
+    samples = rest(30) + [s for part in parts for s in part] + rest(260)
     path = os.path.join(OUT, name + ".wav")
     with wave.open(path, "wb") as w:
         w.setnchannels(1)

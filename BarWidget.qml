@@ -89,6 +89,16 @@ Panel {
 
   readonly property string soundDir: decodeURIComponent(String(Qt.resolvedUrl("sounds/")).replace(/^file:\/\//, ""))
 
+  // Keep the audio sink awake while the game is open. Idle sinks suspend after
+  // a few seconds, and on DSP-backed outputs (Apple Silicon speakers) waking
+  // up again swallows the next short beeps, so sound seemed to cut out
+  // between plays. A silent 8 kHz mono stream costs well under 1% CPU.
+  Process {
+    running: root.fullOpen && !root.muted
+    command: ["sh", "-c", "exec pw-cat --playback --raw --rate 8000 --channels 1 --format s16 "
+      + "-P '{ media.name = led-gridiron-keepalive }' - < /dev/zero"]
+  }
+
   function play(name) {
     if (muted || !name) return
     Quickshell.execDetached(["pw-play", "--volume=0.7", soundDir + name + ".wav"])
@@ -252,7 +262,7 @@ Panel {
     onTriggered: root.blink = (root.blink + 1) % 1000
   }
   Timer {
-    interval: root.s.pro === 2 ? 360 : 760
+    interval: root.s.pro === 2 ? 360 : 1000
     repeat: true
     running: root.active && root.phase === "live"
     onTriggered: { Logic.defenseTick(root.s); root.sync() }

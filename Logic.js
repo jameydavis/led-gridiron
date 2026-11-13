@@ -81,7 +81,10 @@ function setupKickoff(s, receivingTeam) {
   s.ball = null
   s.kickPlan = null
   s.carrier = { x: start, lane: 1 }
-  var shape = [[4, 0], [4, 1], [4, 2], [6, 0], [6, 2], [8, 1]]
+  // Pro 2 lines up a full-width wall; Pro 1 staggers five men and leaves gaps.
+  var shape = s.pro === 2
+    ? [[4, 0], [4, 1], [4, 2], [6, 0], [6, 2], [8, 1]]
+    : [[4, 0], [4, 2], [6, 1], [8, 0], [8, 2]]
   s.defenders = shape.map(function(p) { return { x: clamp(start + d * p[0], MIN_X, MAX_X), lane: p[1] } })
   s.los = start
   s.down = 1
@@ -102,7 +105,10 @@ function setupScrimmage(s) {
   // Three down linemen, two linebackers and a safety, with the linebackers
   // and safety shuffled a little so every snap does not look the same.
   var lb = random() < 0.5 ? [[3, 0], [3, 2]] : [[2, 0], [4, 2]]
-  var shape = [[1, 0], [1, 1], [1, 2], lb[0], lb[1], [rint(5, 7), rint(0, 2)]]
+  var shape = s.pro === 2
+    ? [[1, 0], [1, 1], [1, 2], lb[0], lb[1], [rint(5, 7), rint(0, 2)]]
+    // Pro 1: two linemen with the middle open, a linebacker, two deep backs.
+    : [[1, 0], [1, 2], [3, 1], [5, rint(0, 1) * 2], [7, 1]]
   s.defenders = shape.map(function(p) { return { x: clamp(L + d * p[0], MIN_X, MAX_X), lane: p[1] } })
   snapViewport(s)
 }
@@ -116,11 +122,12 @@ function snapViewport(s) {
 // The display does not scroll. When the carrier runs off either edge, the
 // field wraps to the next 10-yard screen: the carrier reappears on the
 // opposite edge and everyone else keeps their spot on the glass, so the
-// defense you just beat is in front of you again.
+// defense you just beat is in front of you again. Only forward runs wrap.
 function wrapScreen(s) {
   if (!s.carrier) return
   var col = s.carrier.x - s.vx
   if (col >= 0 && col < COLS) return
+  if (col >= COLS ? dir(s) < 0 : dir(s) > 0) return
   var shift = col >= COLS ? COLS : -COLS
   var nvx = clamp(s.vx + shift, MIN_X, MAX_X - COLS + 1)
   var delta = nvx - s.vx
@@ -184,6 +191,9 @@ function move(s, dx, dl) {
   var nx = clamp(c.x + dx, MIN_X, MAX_X)
   var nl = clamp(c.lane + dl, 0, LANES - 1)
   if (nx === c.x && nl === c.lane) return
+  // The screen only wraps forward: backing off the rear edge is blocked.
+  var col = nx - s.vx
+  if ((col < 0 || col >= COLS) && sign(dx) !== dir(s)) return
   if (defenderAt(s, nx, nl) >= 0) {
     emit(s, "thud")
     tackle(s)
@@ -257,8 +267,8 @@ function defenseTick(s) {
   if (s.phase !== "live") return
   var c = s.carrier
   // Pro 1: fewer defenders move each tick and even the closest one hesitates.
-  var moveChance = s.pro === 2 ? 0.75 : 0.3
-  var leadChance = s.pro === 2 ? 1.0 : 0.7
+  var moveChance = s.pro === 2 ? 0.75 : 0.18
+  var leadChance = s.pro === 2 ? 1.0 : 0.5
   var order = s.defenders.map(function(_, i) { return i })
   order.sort(function(a, b) { return dist(s.defenders[a], c) - dist(s.defenders[b], c) })
   for (var k = 0; k < order.length; k++) {
@@ -274,6 +284,11 @@ function defenseTick(s) {
       var nx = df.x + tries[t][0], nl = df.lane + tries[t][1]
       if (nl < 0 || nl >= LANES) continue
       if (nx === c.x && nl === c.lane) {
+        // Pro 1: half the tackle attempts miss and the defender stays put.
+        if (s.pro !== 2 && random() < 0.5) {
+          emit(s, "thud", "", "BROKE A TACKLE")
+          break
+        }
         df.x = nx; df.lane = nl
         tackle(s)
         return
