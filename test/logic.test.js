@@ -159,18 +159,20 @@ test("a defender past the line in the passing lane always picks it off", L => {
   }
 })
 
-test("a defender who stepped up to the line of scrimmage is thrown over", L => {
-  const s = scrimmageAt(L, 30) // carrier on 29, line of scrimmage 30 (column 2)
-  s.receiver = { x: 34, lane: 1, depth: 5 }
-  s.defenders = [{ x: 30, lane: 1 }] // rushed forward into column 2
-  L.move(s, 0, 0)
-  s.phase = "live"
-  assert.ok(L.laneOpen(s))
-  L.pass(s)
-  while (L.ballTick(s)) {}
-  assert.ok(!s.events.some(e => e.code === "INT"))
-  assert.deepStrictEqual(s.carrier, { x: 34, lane: 1 })
-  assert.strictEqual(s.phase, "live")
+test("a defender who stepped forward out of the line is thrown over", L => {
+  // carrier on 29, line of scrimmage 30, defensive line on 32
+  for (const x of [31, 30]) { // one step forward, then all the way up to the line of scrimmage
+    const s = scrimmageAt(L, 30)
+    s.receiver = { x: 35, lane: 1, depth: 5 }
+    s.defenders = [{ x, lane: 1 }]
+    L.move(s, 0, 0)
+    s.phase = "live"
+    assert.ok(L.laneOpen(s), "defender on " + x)
+    L.pass(s)
+    while (L.ballTick(s)) {}
+    assert.ok(!s.events.some(e => e.code === "INT"))
+    assert.deepStrictEqual(s.carrier, { x: 35, lane: 1 })
+  }
 })
 
 test("an open lane is always a catch, even with a defender right next to the receiver", L => {
@@ -192,16 +194,16 @@ test("the receiver appears behind the defensive line at the snap", L => {
   // Hidden before the snap...
   assert.ok(!L.leds(s, 0).includes(2))
   // ...one column past the three-man line, in the top or bottom lane.
-  assert.strictEqual(s.receiver.x, 32)
+  assert.strictEqual(s.receiver.x, 33)
   assert.ok(s.receiver.lane === 0 || s.receiver.lane === 2)
-  const line = s.defenders.filter(d => d.x === 31).length
+  const line = s.defenders.filter(d => d.x === 32).length
   assert.strictEqual(line, 3)
   L.move(s, 0, 0)
   s.phase = "live"
   const m = L.leds(s, 0)
   assert.strictEqual(m[s.receiver.lane * 10 + (s.receiver.x - s.vx)], 2)
   const v = scrimmageAt(L, 70, 1) // visitor attacks left
-  assert.strictEqual(v.receiver.x, 68)
+  assert.strictEqual(v.receiver.x, 67)
 })
 
 test("no pass once the carrier is past the line of scrimmage", L => {
@@ -265,11 +267,11 @@ test("the starting lineup matches the classic handheld formation", L => {
   const s = scrimmageAt(L, 30)
   const m = L.leds(s, 0)
   const rows = [0, 1, 2].map(r => m.slice(r * 10, r * 10 + 10).map(v => v ? (v === 3 ? "C" : "d") : ".").join(""))
-  assert.deepStrictEqual(rows, ["..d...d...", "C.d.d.....", "..d......d"])
+  assert.deepStrictEqual(rows, ["...d..d...", "C..dd.....", "...d.....d"])
   const v = scrimmageAt(L, 70, 1) // visitor: mirrored left-to-right
   const mv = L.leds(v, 0)
   const vrows = [0, 1, 2].map(r => mv.slice(r * 10, r * 10 + 10).map(x => x ? (x === 3 ? "C" : "d") : ".").join(""))
-  assert.deepStrictEqual(vrows, ["...d...d..", ".....d.d.C", "d......d.."])
+  assert.deepStrictEqual(vrows, ["...d..d...", ".....dd..C", "d.....d..."])
 })
 
 test("kickoff returns start from the same lineup, on both Pro levels", L => {
@@ -278,7 +280,7 @@ test("kickoff returns start from the same lineup, on both Pro levels", L => {
     assert.strictEqual(s.kind, "return")
     const m = L.leds(s, 0)
     const rows = [0, 1, 2].map(r => m.slice(r * 10, r * 10 + 10).map(v => v ? (v === 3 ? "C" : "d") : ".").join(""))
-    assert.deepStrictEqual(rows, ["..d...d...", "C.d.d.....", "..d......d"], "pro " + pro)
+    assert.deepStrictEqual(rows, ["...d..d...", "C..dd.....", "...d.....d"], "pro " + pro)
   }
 })
 

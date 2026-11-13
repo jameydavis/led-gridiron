@@ -2,6 +2,7 @@
 // faintly visible like the real thing; painted yard lines and end-zone
 // shading scroll with the window (`vx` = world x of the leftmost column).
 import QtQuick
+import QtQuick.Effects
 
 Rectangle {
   id: field
@@ -51,50 +52,90 @@ Rectangle {
     }
   }
 
+  // Unlit LED segments: always faintly visible behind the smoked plastic.
   Repeater {
     model: field.cols * field.lanes
-    Item {
+    Rectangle {
       readonly property int level: field.leds.length > index ? field.leds[index] : 0
-      x: field.ox + (index % field.cols) * field.cell
-      y: field.oy + Math.floor(index / field.cols) * field.cell
-      width: field.cell
-      height: field.cell
+      visible: level === 0
+      x: field.ox + (index % field.cols) * field.cell + (field.cell - width) / 2
+      y: field.oy + Math.floor(index / field.cols) * field.cell + (field.cell - height) / 2
+      width: field.cell * 0.66
+      height: field.cell * 0.3
+      radius: height / 2
+      color: "#3a0c09"
+    }
+  }
 
-      // Players are horizontal pill-shaped LED segments with rounded ends;
-      // the ball in flight stays a small round dot so it reads differently.
-      readonly property bool isBall: level === 4
-      readonly property real pillW: field.cell * 0.66
-      readonly property real pillH: field.cell * 0.3
+  // The glow: blurred copies of the lit layer drawn underneath it, a wide
+  // soft bloom plus a tighter halo. The blur keeps each LED's own color, so
+  // the bright ball carrier blooms more than the dimmer defenders.
+  MultiEffect {
+    source: lit
+    x: lit.x; y: lit.y; width: lit.width; height: lit.height
+    autoPaddingEnabled: false
+    blurEnabled: true
+    blurMax: 64
+    blur: 1.0
+    blurMultiplier: 0.6
+    brightness: 0.5
+    saturation: 0.3
+  }
+  MultiEffect {
+    source: lit
+    x: lit.x; y: lit.y; width: lit.width; height: lit.height
+    autoPaddingEnabled: false
+    blurEnabled: true
+    blurMax: 20
+    blur: 0.9
+    brightness: 0.3
+  }
 
-      // Glow halo for the bright blips (ball carrier, ball in flight).
-      Rectangle {
-        anchors.centerIn: parent
-        width: isBall ? parent.width * 0.7 : pillW + field.cell * 0.24
-        height: isBall ? width : pillH + field.cell * 0.24
-        radius: height / 2
-        color: "#ff2a12"
-        opacity: level >= 3 ? 0.22 : level === 2 ? 0.1 : 0
-      }
-      Rectangle {
-        anchors.centerIn: parent
-        width: isBall ? field.cell * 0.34 : pillW
-        height: isBall ? width : pillH
-        radius: height / 2
-        color: level === 0 ? "#3a0c09"
-             : level === 1 ? "#c41d10"
-             : level === 2 ? "#e8301c"
-             : "#ff4a30"
-        border.width: level >= 3 ? 2 : 0
-        border.color: "#ffb19e"
-        // A tiny specular dot so lit LEDs read as domes, not flat circles.
+  // Lit LEDs, rendered into their own layer so the glow can sample them.
+  // The layer has a fixed margin for the glow to spread into, so the blurred
+  // copies and the crisp LEDs share exactly the same geometry.
+  readonly property real glowPad: cell * 1.4
+  Item {
+    id: lit
+    x: -field.glowPad
+    y: -field.glowPad
+    width: field.width + field.glowPad * 2
+    height: field.height + field.glowPad * 2
+    layer.enabled: true
+
+    Repeater {
+      model: field.cols * field.lanes
+      Item {
+        readonly property int level: field.leds.length > index ? field.leds[index] : 0
+        visible: level > 0
+        x: field.glowPad + field.ox + (index % field.cols) * field.cell
+        y: field.glowPad + field.oy + Math.floor(index / field.cols) * field.cell
+        width: field.cell
+        height: field.cell
+
+        // Players are horizontal pill-shaped LED segments with rounded ends;
+        // the ball in flight stays a small round dot so it reads differently.
+        readonly property bool isBall: level === 4
+
         Rectangle {
-          visible: level > 0
-          x: parent.width * (isBall ? 0.22 : 0.16); y: parent.height * 0.18
-          width: parent.width * (isBall ? 0.26 : 0.3)
-          height: isBall ? width : parent.height * 0.26
+          anchors.centerIn: parent
+          width: isBall ? field.cell * 0.34 : field.cell * 0.66
+          height: isBall ? width : field.cell * 0.3
           radius: height / 2
-          color: "#ffffff"
-          opacity: level >= 3 ? 0.55 : 0.25
+          color: level === 1 ? "#d42412"
+               : level === 2 ? "#f0341e"
+               : "#ff4a30"
+          border.width: level >= 3 ? 2 : 0
+          border.color: "#ffb19e"
+          // A small specular highlight so lit LEDs read as domes, not flat.
+          Rectangle {
+            x: parent.width * (isBall ? 0.22 : 0.16); y: parent.height * 0.18
+            width: parent.width * (isBall ? 0.26 : 0.3)
+            height: isBall ? width : parent.height * 0.26
+            radius: height / 2
+            color: "#ffffff"
+            opacity: level >= 3 ? 0.55 : 0.25
+          }
         }
       }
     }

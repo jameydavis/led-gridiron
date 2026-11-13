@@ -100,16 +100,17 @@ function setupScrimmage(s) {
   // The receiver lines up behind the defensive line (one column past the
   // three linemen), in the top or bottom lane. It stays dark until the snap
   // so the pre-snap picture is exactly the classic lineup.
-  s.receiver = { x: L + 2 * d, lane: wide, depth: rint(4, 7) }
+  s.receiver = { x: s.carrier.x + (LINE_COLUMN + 1) * d, lane: wide, depth: rint(4, 7) }
   s.defenders = lineUp(s, s.carrier.x)
   snapViewport(s)
 }
 
 // The classic handheld lineup, used for every kickoff return and every snap.
-// [columns ahead of the ball carrier, lane]: a three-man line two columns
+// [columns ahead of the ball carrier, lane]: a three-man line three columns
 // ahead, a linebacker in the middle at +4, a defender in the top lane at +6
 // and a deep back in the bottom lane at +9.
-var FORMATION = [[2, 0], [2, 1], [2, 2], [4, 1], [6, 0], [9, 2]]
+var LINE_COLUMN = 3
+var FORMATION = [[LINE_COLUMN, 0], [LINE_COLUMN, 1], [LINE_COLUMN, 2], [4, 1], [6, 0], [9, 2]]
 
 function lineUp(s, carrierX) {
   var d = dir(s)
@@ -369,11 +370,13 @@ function passPath(s) {
   return path
 }
 
-// Can a defender on this cell of the throwing path catch the ball? Defenders
-// who have rushed up to the line of scrimmage or into the backfield are
-// thrown over; anyone past the line in the lane picks it off.
+// Can a defender on this cell of the throwing path catch the ball? Anyone
+// who has stepped forward out of the defensive line toward the passer is
+// rushing and gets thrown over; anyone on the line's column or deeper in the
+// lane picks it off.
 function catcherAt(s, cell) {
-  return defenderAt(s, cell.x, cell.lane) >= 0 && (cell.x - s.los) * dir(s) > 0
+  var lineX = s.los + (LINE_COLUMN - 1) * dir(s)   // the carrier starts one behind the los
+  return defenderAt(s, cell.x, cell.lane) >= 0 && (cell.x - lineX) * dir(s) >= 0
 }
 
 function laneOpen(s) {
