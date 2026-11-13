@@ -554,47 +554,57 @@ Panel {
           }
         }
 
-        // ---- key legend: the window grows downward to show it
+        // ---- key legend: the window grows downward to show it. Everything
+        // is sized to the panel's width (the field's width) so nothing spills.
         Rectangle {
+          id: legendBox
           visible: root.helpOpen
           Layout.fillWidth: true
-          implicitHeight: legend.implicitHeight + root.u * 2.4
+          readonly property real pad: root.u * 1.4
+          implicitHeight: legendCol.implicitHeight + pad * 2
           radius: root.u * 0.5
           color: "#120403"
           border.width: 1
           border.color: "#2a0d0a"
 
-          GridLayout {
-            id: legend
-            anchors.centerIn: parent
-            columns: 4
-            columnSpacing: root.u * 1.4
-            rowSpacing: root.u * 0.9
+          Column {
+            id: legendCol
+            x: legendBox.pad
+            y: legendBox.pad
+            width: legendBox.width - legendBox.pad * 2
+            spacing: root.u * 1.4
 
-            KeyRow { keys: ["W", "A", "S", "D"]; label: "MOVE (ARROWS TOO)" }
-            KeyRow { keys: ["SPACE"]; label: "PASS" }
-            KeyRow { keys: ["E"]; label: "KICK" }
-            KeyRow { keys: ["Q"]; label: "STATUS (HOLD) / NEXT PLAY" }
-            KeyRow { keys: ["R"]; label: "SCORE (HOLD)" }
-            KeyRow { keys: ["1", "2"]; label: "PRO 1 / PRO 2" }
-            KeyRow { keys: ["P"]; label: "PAUSE" }
-            KeyRow { keys: ["M"]; label: "SOUND" }
-            KeyRow { keys: ["N", "N"]; label: "NEW GAME" }
-            KeyRow { keys: ["H"]; label: "KEYS" }
-            KeyRow { keys: ["ESC"]; label: "CLOSE" }
-            Item { Layout.columnSpan: 2; implicitWidth: 1; implicitHeight: 1 }
+            GridLayout {
+              width: parent.width
+              columns: 2
+              columnSpacing: root.u * 1.4
+              rowSpacing: root.u * 0.9
+
+              KeyRow { keys: ["W", "A", "S", "D"]; label: "MOVE" }
+              KeyRow { keys: ["SPACE"]; label: "PASS" }
+              KeyRow { keys: ["E"]; label: "KICK" }
+              KeyRow { keys: ["Q"]; label: "STATUS / NEXT PLAY" }
+              KeyRow { keys: ["R"]; label: "SCORE" }
+              KeyRow { keys: ["1", "2"]; label: "PRO 1 / PRO 2" }
+              KeyRow { keys: ["P"]; label: "PAUSE" }
+              KeyRow { keys: ["M"]; label: "SOUND" }
+              KeyRow { keys: ["N", "N"]; label: "NEW GAME" }
+              KeyRow { keys: ["H"]; label: "KEYS" }
+              KeyRow { keys: ["ESC"]; label: "CLOSE" }
+            }
 
             PlainLabel {
-              Layout.columnSpan: 4
-              Layout.topMargin: root.u * 0.6
-              Layout.maximumWidth: root.cell * 10
+              width: parent.width
               wrapMode: Text.WordWrap
               color: root.inkDim
               font.pixelSize: root.u * 1.0
-              text: "YOU ARE THE BRIGHT BLIP. ANY MOVE SNAPS THE BALL. RUN OFF THE EDGE AND THE FIELD "
-                + "WRAPS TO THE NEXT 10 YARDS. PASS TO THE BLINKING RECEIVER BEFORE YOU CROSS THE LINE. "
-                + "AFTER THE WHISTLE PRESS STATUS TO SET UP THE NEXT PLAY. KICK BEFORE THE SNAP: A FIELD "
-                + "GOAL INSIDE THE OPPONENT'S 38, A PUNT FROM ANYWHERE ELSE. HOME RUNS RIGHT, VISITOR RUNS LEFT."
+              font.letterSpacing: 0.8
+              lineHeight: 1.15
+              text: "YOU ARE THE BRIGHT PLAYER. ANY MOVE SNAPS THE BALL (ARROW KEYS WORK TOO). RUN OFF "
+                + "THE FRONT EDGE AND THE FIELD WRAPS TO THE NEXT 10 YARDS. PASS TO THE BLINKING RECEIVER "
+                + "BEFORE YOU CROSS THE LINE. AFTER THE WHISTLE PRESS STATUS TO SET UP THE NEXT PLAY; "
+                + "HOLD STATUS OR SCORE TO KEEP THEM ON THE DISPLAY. KICK BEFORE THE SNAP: A FIELD GOAL "
+                + "INSIDE THE OPPONENT'S 38, A PUNT FROM ANYWHERE ELSE. HOME RUNS RIGHT, VISITOR RUNS LEFT."
             }
           }
         }
@@ -632,30 +642,36 @@ Panel {
     }
   }
 
+  // One legend entry: keycaps, then a label that takes the rest of the
+  // column (eliding rather than overflowing if a translation runs long).
   component KeyRow: Item {
+    id: keyRow
     property var keys: []
     property string label: ""
-    Layout.columnSpan: 2
-    implicitWidth: keyRowInner.implicitWidth
-    implicitHeight: keyRowInner.implicitHeight
+    Layout.fillWidth: true
+    Layout.preferredWidth: 1      // equal columns
+    implicitHeight: caps.implicitHeight
     Row {
-      id: keyRowInner
+      id: caps
       spacing: root.u * 0.4
       Repeater {
-        model: keys
+        model: keyRow.keys
         Keycap { label: modelData; unit: root.u; ink: root.ink; fontFamily: root.fontFamily }
       }
-      Item { width: root.u * 0.6; height: 1 }
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        textFormat: Text.PlainText
-        text: label
-        color: root.ink
-        font.family: root.fontFamily
-        font.bold: true
-        font.letterSpacing: 1.2
-        font.pixelSize: root.u * 1.05
-      }
+    }
+    Text {
+      anchors.left: caps.right
+      anchors.leftMargin: root.u * 0.9
+      anchors.right: parent.right
+      anchors.verticalCenter: caps.verticalCenter
+      elide: Text.ElideRight
+      textFormat: Text.PlainText
+      text: keyRow.label
+      color: root.ink
+      font.family: root.fontFamily
+      font.bold: true
+      font.letterSpacing: 1.0
+      font.pixelSize: root.u * 1.05
     }
   }
 
